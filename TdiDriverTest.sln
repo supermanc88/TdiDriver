@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TdiDriverTest", "TdiDriverTest\TdiDriverTest.vcxproj", "{1F7C83DD-EE62-4EE6-B628-5876477B5086}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM.ActiveCfg = Debug|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM.Build.0 = Debug|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM.Deploy.0 = Debug|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM64.Build.0 = Debug|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x64.ActiveCfg = Debug|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x64.Build.0 = Debug|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x64.Deploy.0 = Debug|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x86.ActiveCfg = Debug|Win32
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x86.Build.0 = Debug|Win32
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Debug|x86.Deploy.0 = Debug|Win32
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM.ActiveCfg = Release|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM.Build.0 = Release|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM.Deploy.0 = Release|ARM
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM64.ActiveCfg = Release|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM64.Build.0 = Release|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|ARM64.Deploy.0 = Release|ARM64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x64.ActiveCfg = Release|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x64.Build.0 = Release|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x64.Deploy.0 = Release|x64
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x86.ActiveCfg = Release|Win32
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x86.Build.0 = Release|Win32
+		{1F7C83DD-EE62-4EE6-B628-5876477B5086}.Release|x86.Deploy.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AD9871B4-E423-4808-8CDE-B2236536633A}
+	EndGlobalSection
+EndGlobal
