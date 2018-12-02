@@ -103,6 +103,11 @@ NTSTATUS DeviceDisPatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 		}
 
 	}
+	else
+	{
+		IoSkipCurrentIrpStackLocation(Irp);
+		status = IoCallDriver(g_TcpOldObj, Irp);
+	}
 
 	return status;
 }
@@ -140,11 +145,9 @@ NTSTATUS TdiCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 	}
 
 	IoSkipCurrentIrpStackLocation(Irp);
-	IoCallDriver(g_TcpOldObj, Irp);
-
-	status = Irp->IoStatus.Status;
-	IoCompleteRequest(Irp, IO_NO_INCREMENT);
+	status = IoCallDriver(g_TcpOldObj, Irp);
 	return status;
+
 }
 
 
