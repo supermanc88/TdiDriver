@@ -1,6 +1,7 @@
 #pragma once
 #include <ntddk.h>
 #include <tdi.h>
+#include <tdikrnl.h>
 
 #define TCP_DEVICE_NAME					L"\\Device\\Tcp"
 #define UDP_DEVICE_NAME					L"\\Device\\Udp"
@@ -25,7 +26,7 @@ VOID DetachAndDeleteDevie(PDRIVER_OBJECT DriverObject, PDEVICE_OBJECT fltObj, PD
 // 分发函数
 NTSTATUS DeviceDisPatch(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 
-NTSTATUS TdiCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+NTSTATUS TdiControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 
 #ifdef __cplusplus
 }
