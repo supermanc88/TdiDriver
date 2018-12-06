@@ -23,10 +23,14 @@ NTSTATUS CreateAndAttachDevice(PDRIVER_OBJECT DriverObject, PDEVICE_OBJECT * flt
 //取消绑定并删除设备
 VOID DetachAndDeleteDevie(PDRIVER_OBJECT DriverObject, PDEVICE_OBJECT fltObj, PDEVICE_OBJECT oldObj);
 
-// 分发函数
-NTSTATUS DeviceDisPatch(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+// // 分发函数
+// NTSTATUS DeviceDisPatch(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+//
+// NTSTATUS TdiControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 
-NTSTATUS TdiControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+
+NTSTATUS TdiPassThrough(PDEVICE_OBJECT DeviceObject, PIRP Irp);				//不关心的分发函数全部通过
 
 #ifdef __cplusplus
 }
