@@ -20,6 +20,21 @@ typedef struct _IP_ADDRESS
 	};
 }IP_ADDRESS, *PIP_ADDRESS;
 
+USHORT
+TdiFilter_Ntohs(IN USHORT v)
+{
+	return (((UCHAR)(v >> 8)) | (v & 0xff) << 8);
+};
+
+ULONG
+TdiFilter_Ntohl(IN ULONG v)					//µßµ¹IPµØÖ·µÄË³Ðò
+{
+	return ((v & 0xff000000) >> 24 |
+		(v & 0xff0000) >> 8 |
+		(v & 0xff00) << 8 |
+		((UCHAR)v) << 24);
+};
+
 VOID DriverUnload(PDRIVER_OBJECT DriverObject)
 {
 	KdPrint(("TdiDriver: Çý¶¯Ð¶ÔØ\n"));
@@ -93,87 +108,6 @@ VOID DetachAndDeleteDevie(PDRIVER_OBJECT DriverObject, PDEVICE_OBJECT fltObj, PD
 	IoDeleteDevice(fltObj);
 }
 
-// NTSTATUS DeviceDisPatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
-// {
-// 	PIO_STACK_LOCATION irps = IoGetCurrentIrpStackLocation(Irp);
-//
-// 	NTSTATUS status;
-//
-//
-// 	if (DeviceObject == g_TcpFltObj)
-// 	{
-// 		switch(irps->MajorFunction)
-// 		{
-// 			case IRP_MJ_INTERNAL_DEVICE_CONTROL:
-// 				status = TdiControl(DeviceObject, Irp);
-// 			break;
-// 			default:
-// 			IoSkipCurrentIrpStackLocation(Irp);
-// 			status = IoCallDriver(g_TcpOldObj, Irp);
-// 			break;
-// 		}
-//
-// 	}
-// 	else
-// 	{
-// 		IoSkipCurrentIrpStackLocation(Irp);
-// 		status = IoCallDriver(g_TcpOldObj, Irp);
-// 	}
-//
-// 	return status;
-// }
-
-// Õâ¶ÎÆúÓÃ
-// NTSTATUS TdiControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
-// {
-//
-// 	NTSTATUS status;
-// 	PFILE_FULL_EA_INFORMATION ea;
-// 	PIO_STACK_LOCATION Irps;
-//
-// 	Irps = IoGetCurrentIrpStackLocation(Irp);
-//
-// 	if (Irps->MinorFunction == TDI_CONNECT)
-// 	{
-// 		ea = (PFILE_FULL_EA_INFORMATION)Irp->AssociatedIrp.SystemBuffer;
-//
-// 		if (ea != NULL)
-// 		{
-// 			if (ea->EaNameLength == TDI_TRANSPORT_ADDRESS_LENGTH &&
-// 				memcpy(ea->EaName, TdiTransportAddress, TDI_TRANSPORT_ADDRESS_LENGTH) == 0)
-// 			{
-// 				PTRANSPORT_ADDRESS transportAddress;
-//
-// 				transportAddress = (PTRANSPORT_ADDRESS)((PUCHAR)ea + FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) + TDI_TRANSPORT_ADDRESS_LENGTH + 1);
-//
-// 				switch (transportAddress->Address->AddressType)
-// 				{
-// 				case TDI_ADDRESS_TYPE_IP:
-// 				{
-// 					PTDI_ADDRESS_IP ipAddress = (PTDI_ADDRESS_IP)transportAddress->Address->Address;
-// 					KdPrint(("TdiDriver: ip:%d, port:%d\n", ipAddress->in_addr, ipAddress->sin_port));
-// 					break;
-// 				}
-// 				case TDI_ADDRESS_TYPE_IP6:
-// 					break;
-// 				default:
-// 					break;
-// 				}
-// 			}
-// 		}
-//
-// 		IoSkipCurrentIrpStackLocation(Irp);
-// 		status = IoCallDriver(g_TcpOldObj, Irp);
-// 		return status;
-// 	}
-// 	else
-// 	{
-// 		IoSkipCurrentIrpStackLocation(Irp);
-// 		status = IoCallDriver(g_TcpOldObj, Irp);
-// 		return status;
-// 	}
-//
-// }
 
 
 NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
@@ -193,7 +127,7 @@ NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 			
 			KdPrint(("Tdi Driver: TDI_CONNECT!\n"));
 
-			tdiReqKelConnect = (PTDI_REQUEST_KERNEL_CONNECT)&irpStack->Parameters;
+			tdiReqKelConnect = (PTDI_REQUEST_KERNEL_CONNECT)(&irpStack->Parameters);
 
 			if(!tdiReqKelConnect->RequestConnectionInformation)
 			{
@@ -216,9 +150,10 @@ NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 			{
 			case TDI_ADDRESS_TYPE_IP:
 			{
-				PTDI_ADDRESS_IP tdiAddressIp = (PTDI_ADDRESS_IP)transportAddress->Address->Address;
+				PTDI_ADDRESS_IP tdiAddressIp = (PTDI_ADDRESS_IP)(transportAddress->Address->Address);
 				ipAddress.ipInt = tdiAddressIp->in_addr;
-				KdPrint(("TdiDriver: ip:%d.%d.%d.%d, port:%d\n", ipAddress.ipUChar[3], ipAddress.ipUChar[2], ipAddress.ipUChar[1], ipAddress.ipUChar[0], tdiAddressIp->sin_port));
+				USHORT port = TdiFilter_Ntohs(tdiAddressIp->sin_port);
+				KdPrint(("TdiDriver: ip:%d.%d.%d.%d, port:%d\n", ipAddress.ipUChar[0], ipAddress.ipUChar[1], ipAddress.ipUChar[2], ipAddress.ipUChar[3], port));
 				break;
 			}
 			case TDI_ADDRESS_TYPE_IP6:
