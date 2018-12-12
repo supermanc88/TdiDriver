@@ -32,6 +32,21 @@ NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 
 NTSTATUS TdiPassThrough(PDEVICE_OBJECT DeviceObject, PIRP Irp);				//不关心的分发函数全部通过
 
+NTSTATUS TdiFilterCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp);			//在这个函数中获取本地ip地址
+
+BOOLEAN TdiGetAddressInfo(PTRANSPORT_ADDRESS transportAddress);				//打印ip地址
+
+NTSTATUS MyIoCompletionRoutine(
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp,
+	PVOID Context
+);
+
+NTSTATUS QueryAddressInfoCompleteRoutine(
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp,
+	PVOID Context
+);
 #ifdef __cplusplus
 }
 #endif

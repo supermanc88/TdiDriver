@@ -10,6 +10,11 @@ PDEVICE_OBJECT g_UdpFltObj = NULL;
 PDEVICE_OBJECT g_TcpOldObj = NULL;
 PDEVICE_OBJECT g_UdpOldObj = NULL;
 
+typedef struct
+{
+	TDI_ADDRESS_INFO *tai;
+	PFILE_OBJECT	fileObj;
+} TDI_CREATE_ADDROBJ2_CTX;
 
 typedef struct _IP_ADDRESS
 {
@@ -19,6 +24,12 @@ typedef struct _IP_ADDRESS
 		UCHAR ipUChar[4];
 	};
 }IP_ADDRESS, *PIP_ADDRESS;
+
+NTKERNELAPI NTSTATUS IoCheckEaBufferValidity(
+	PFILE_FULL_EA_INFORMATION EaBuffer,
+	ULONG                     EaLength,
+	PULONG                    ErrorOffset
+);
 
 USHORT
 TdiFilter_Ntohs(IN USHORT v)
@@ -55,6 +66,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 		DriverObject->MajorFunction[i] = TdiPassThrough;
 	}
 	DriverObject->MajorFunction[IRP_MJ_INTERNAL_DEVICE_CONTROL] = TdiInternalDeviceControl;			//主要操作都在这个里面
+	DriverObject->MajorFunction[IRP_MJ_CREATE] = TdiFilterCreate;
 
 	//开始创建并绑定设备
 	CreateAndAttachDevice(DriverObject, &g_TcpFltObj, &g_TcpOldObj, TCP_DEVICE_NAME);
@@ -119,12 +131,11 @@ NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 	PTRANSPORT_ADDRESS transportAddress = NULL;
 
 	PTDI_REQUEST_KERNEL_CONNECT tdiReqKelConnect = NULL;			
-	IP_ADDRESS ipAddress;
 	switch (irpStack->MinorFunction)
 	{
 	case TDI_CONNECT:
 		{
-			
+			//创建连接的时候走这个流程	
 			KdPrint(("Tdi Driver: TDI_CONNECT!\n"));
 
 			tdiReqKelConnect = (PTDI_REQUEST_KERNEL_CONNECT)(&irpStack->Parameters);
@@ -146,27 +157,17 @@ NTSTATUS TdiInternalDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
 			transportAddress = (PTRANSPORT_ADDRESS)(tdiReqKelConnect->RequestConnectionInformation->RemoteAddress);
 
-			switch (transportAddress->Address->AddressType)
-			{
-			case TDI_ADDRESS_TYPE_IP:
-			{
-				PTDI_ADDRESS_IP tdiAddressIp = (PTDI_ADDRESS_IP)(transportAddress->Address->Address);
-				ipAddress.ipInt = tdiAddressIp->in_addr;
-				USHORT port = TdiFilter_Ntohs(tdiAddressIp->sin_port);
-				KdPrint(("TdiDriver: ip:%d.%d.%d.%d, port:%d\n", ipAddress.ipUChar[0], ipAddress.ipUChar[1], ipAddress.ipUChar[2], ipAddress.ipUChar[3], port));
-				break;
-			}
-			case TDI_ADDRESS_TYPE_IP6:
-				break;
-			default:
-				break;
-			}
-
+			TdiGetAddressInfo(transportAddress);
 			IoSkipCurrentIrpStackLocation(Irp);
 			status = IoCallDriver(g_TcpOldObj, Irp);
 			break;
 		}
 
+	case TDI_ACCEPT:
+		IoSkipCurrentIrpStackLocation(Irp);
+		status = IoCallDriver(g_TcpOldObj, Irp);
+		break;
+	
 	default:
 		IoSkipCurrentIrpStackLocation(Irp);
 		status = IoCallDriver(g_TcpOldObj, Irp);
@@ -185,7 +186,103 @@ NTSTATUS TdiPassThrough(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 	return status;
 }
 
+NTSTATUS TdiFilterCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp)
+{
+	KdPrint(("Tdi Driver: TdiFilterCreate\n"));
+	PIO_STACK_LOCATION irpSp = IoGetCurrentIrpStackLocation(Irp);
+	PFILE_FULL_EA_INFORMATION ea = NULL;
+	ULONG ErrorOffset = 0;
+	NTSTATUS status = STATUS_UNSUCCESSFUL;
+	ea = (PFILE_FULL_EA_INFORMATION)Irp->AssociatedIrp.SystemBuffer;
+	status = IoCheckEaBufferValidity(ea, irpSp->Parameters.Create.EaLength, &ErrorOffset);
 
-#ifdef __cplusplus
+	if(NT_SUCCESS(status))
+	{
+		if (TDI_TRANSPORT_ADDRESS_LENGTH == ea->EaNameLength &&
+			TDI_TRANSPORT_ADDRESS_LENGTH == RtlCompareMemory(ea->EaName, TdiTransportAddress, TDI_TRANSPORT_ADDRESS_LENGTH))
+		{
+			PTRANSPORT_ADDRESS transportAddress;
+
+			transportAddress = (PTRANSPORT_ADDRESS)((PUCHAR)ea +
+				FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) +
+				TDI_TRANSPORT_ADDRESS_LENGTH + 1);
+
+			TdiGetAddressInfo(transportAddress);
+
+			PIRP queryIrp;
+
+			queryIrp = TdiBuildInternalDeviceControlIrp(TDI_QUERY_INFORMATION,
+				g_TcpOldObj,
+				irpSp->FileObject,
+				NULL,
+				NULL);
+
+			IoSetCompletionRoutine(Irp, MyIoCompletionRoutine, queryIrp, TRUE, TRUE, TRUE);
+		}
+	}
+	IoSkipCurrentIrpStackLocation(Irp);
+	return IoCallDriver(g_TcpOldObj, Irp);
+}
+
+BOOLEAN TdiGetAddressInfo(PTRANSPORT_ADDRESS transportAddress)
+{
+	switch (transportAddress->Address->AddressType)
+	{
+	case TDI_ADDRESS_TYPE_IP:
+	{
+		PTDI_ADDRESS_IP tdiAddressIp = (PTDI_ADDRESS_IP)(transportAddress->Address->Address);
+		
+		IP_ADDRESS ipAddress;
+		ipAddress.ipInt = tdiAddressIp->in_addr;
+		USHORT port = TdiFilter_Ntohs(tdiAddressIp->sin_port);
+		KdPrint(("TdiDriver: ip:%d.%d.%d.%d, port:%d\n", ipAddress.ipUChar[0], ipAddress.ipUChar[1], ipAddress.ipUChar[2], ipAddress.ipUChar[3], port));
+		break;
+	}
+	case TDI_ADDRESS_TYPE_IP6:
+		break;
+	default:
+		break;
+	}
+
+	return FALSE;
+}
+
+NTSTATUS MyIoCompletionRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Context)
+{
+	PIO_STACK_LOCATION irpSp = IoGetCurrentIrpStackLocation(Irp);
+	PIRP queryIrp = (PIRP)Context;
+
+	TDI_CREATE_ADDROBJ2_CTX *ctx = NULL;
+	ctx = (TDI_CREATE_ADDROBJ2_CTX *)ExAllocatePool(NonPagedPool, sizeof(TDI_CREATE_ADDROBJ2_CTX));
+
+	ctx->fileObj = irpSp->FileObject;
+	ctx->tai = (TDI_ADDRESS_INFO *)ExAllocatePool(NonPagedPool, sizeof(TDI_ADDRESS_INFO) - 1 + TDI_ADDRESS_LENGTH_OSI_TSAP);;
+
+	PMDL mdl = IoAllocateMdl(ctx->tai, sizeof(TDI_ADDRESS_INFO) - 1 + TDI_ADDRESS_LENGTH_OSI_TSAP, FALSE, FALSE, NULL);
+
+	MmBuildMdlForNonPagedPool(mdl);
+
+	TdiBuildQueryInformation(queryIrp, g_TcpOldObj, irpSp->FileObject,
+		QueryAddressInfoCompleteRoutine,
+		ctx,
+		TDI_QUERY_ADDRESS_INFO,
+		mdl);
+
+	return IoCallDriver(g_TcpOldObj, queryIrp);
+}
+
+NTSTATUS QueryAddressInfoCompleteRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Context)
+{
+	TDI_CREATE_ADDROBJ2_CTX * ctx = (TDI_CREATE_ADDROBJ2_CTX *)Context;
+	TA_ADDRESS * addr = ctx->tai->Address.Address;
+
+	KdPrint(("Tdi Driver QueryAddressInfo %x %u",
+		TdiFilter_Ntohl(((TDI_ADDRESS_IP *)(addr->Address))->in_addr),
+		TdiFilter_Ntohs(((TDI_ADDRESS_IP *)(addr->Address))->sin_port)
+		));
+	return STATUS_SUCCESS;
+}
+
+#ifdef __cplusplus 
 }
 #endif
