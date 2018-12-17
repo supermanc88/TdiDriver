@@ -217,7 +217,10 @@ NTSTATUS TdiFilterCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 				NULL,
 				NULL);
 
+			IoCopyCurrentIrpStackLocationToNext(Irp);
+
 			IoSetCompletionRoutine(Irp, MyIoCompletionRoutine, queryIrp, TRUE, TRUE, TRUE);
+			return IoCallDriver(g_TcpOldObj, Irp);
 		}
 	}
 	IoSkipCurrentIrpStackLocation(Irp);
@@ -251,6 +254,7 @@ NTSTATUS MyIoCompletionRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Cont
 {
 	PIO_STACK_LOCATION irpSp = IoGetCurrentIrpStackLocation(Irp);
 	PIRP queryIrp = (PIRP)Context;
+	NTSTATUS status = STATUS_SUCCESS;
 
 	TDI_CREATE_ADDROBJ2_CTX *ctx = NULL;
 	ctx = (TDI_CREATE_ADDROBJ2_CTX *)ExAllocatePool(NonPagedPool, sizeof(TDI_CREATE_ADDROBJ2_CTX));
@@ -263,12 +267,23 @@ NTSTATUS MyIoCompletionRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Cont
 	MmBuildMdlForNonPagedPool(mdl);
 
 	TdiBuildQueryInformation(queryIrp, g_TcpOldObj, irpSp->FileObject,
-		QueryAddressInfoCompleteRoutine,
-		ctx,
+		// QueryAddressInfoCompleteRoutine,
+		NULL,
+		// ctx,
+		NULL,
 		TDI_QUERY_ADDRESS_INFO,
 		mdl);
 
-	return IoCallDriver(g_TcpOldObj, queryIrp);
+	status = IoCallDriver(g_TcpOldObj, queryIrp);
+
+	Irp->IoStatus.Status = status;
+
+	if(Irp->PendingReturned)
+	{
+		IoMarkIrpPending(Irp);
+	}
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS QueryAddressInfoCompleteRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Context)
