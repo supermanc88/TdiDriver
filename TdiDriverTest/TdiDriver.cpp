@@ -212,7 +212,7 @@ NTSTATUS TdiFilterCreate(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 			PIRP queryIrp;
 
 			queryIrp = TdiBuildInternalDeviceControlIrp(TDI_QUERY_INFORMATION,
-				g_TcpOldObj,
+				DeviceObject,
 				irpSp->FileObject,
 				NULL,
 				NULL);
@@ -264,18 +264,18 @@ NTSTATUS MyIoCompletionRoutine(PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Cont
 
 	PMDL mdl = IoAllocateMdl(ctx->tai, sizeof(TDI_ADDRESS_INFO) - 1 + TDI_ADDRESS_LENGTH_OSI_TSAP, FALSE, FALSE, NULL);
 
-	MmBuildMdlForNonPagedPool(mdl);
+	MmProbeAndLockPages(mdl, Irp->RequestorMode, IoModifyAccess);
 
-	TdiBuildQueryInformation(queryIrp, g_TcpOldObj, irpSp->FileObject,
-		// QueryAddressInfoCompleteRoutine,
-		NULL,
-		// ctx,
-		NULL,
+	TdiBuildQueryInformation(queryIrp, DeviceObject, irpSp->FileObject,
+		QueryAddressInfoCompleteRoutine,
+		// NULL,
+		ctx,
+		// NULL,
 		TDI_QUERY_ADDRESS_INFO,
 		mdl);
-
+	
 	status = IoCallDriver(g_TcpOldObj, queryIrp);
-
+	
 	Irp->IoStatus.Status = status;
 
 	if(Irp->PendingReturned)
